@@ -1,0 +1,71 @@
+name: Test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  test_in_vm:
+    name: Test in VM
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_DATE_EPOCH: 0
+      GOOS: linux
+      GOARCH: amd64
+      CGO_ENABLED: 0
+      GODEBUG: gocachehash=1
+      GOCACHE: /tmp/go-build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ${{ github.run_id }}-${{ github.run_attempt }}
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ github.run_id }}-${{ github.run_attempt }}/go.mod
+
+      - name: Setup Go cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.GOCACHE }}
+          key: test_in_vm
+
+      - run: find . -exec touch -m -t 197001010000.01 {} +
+        working-directory: ${{ github.run_id }}-${{ github.run_attempt }}
+
+      - run: go test .
+        working-directory: ${{ github.run_id }}-${{ github.run_attempt }}
+
+  test_in_container:
+    name: Test in Container
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/golang:1.25.0
+      env:
+        SOURCE_DATE_EPOCH: "0"
+        GOOS: linux
+        GOARCH: amd64
+        CGO_ENABLED: "0"
+        GODEBUG: gocachehash=1
+        GOCACHE: /tmp/go-build
+    steps:
+      - run: env
+      - uses: actions/checkout@v4
+        with:
+          path: ${{ github.run_id }}-${{ github.run_attempt }}
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ github.run_id }}-${{ github.run_attempt }}/go.mod
+
+      - name: Setup Go cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/go-build
+          key: test_in_container
+
+      - run: find . -exec touch -m -t 197001010000.01 {} +
+        working-directory: ${{ github.run_id }}-${{ github.run_attempt }}
+
+      - run: go test .
+        working-directory: ${{ github.run_id }}-${{ github.run_attempt }}
